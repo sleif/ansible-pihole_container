@@ -6,8 +6,8 @@ name: CI
     branches:
       - main
       - master
-  schedule:
-    - cron: "0 4 * * 5"
+  # schedule:
+  #   - cron: "0 4 * * 5"
 
 defaults:
   run:

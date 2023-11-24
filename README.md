@@ -1,48 +1,46 @@
-sleif.pihole_docker
-============
+# sleif.pihole_container
 
-This role runs a pihole instance on docker.
+This role runs a Pihole instance in a container.
 
-Requirements
-------------
+## Requirements
 
-Use it on a machine setup with ansible role sleif.docker.
+- Podman installed on the target host.
+- ansible role sleif.podman
 
-Role Variables
---------------
-- container_storage_dir_base: '/srv'
-- DOCKER_NETWORK_NAME (can be defined in sleif.docker)
+## Role Variables
+
+- container_storage_dir_base_local: '/srv'
 - pihole_password
 - pihole_external_web_port
 
-* settings about local dns domain
+### settings about local dns domain
+
 - pihole_rev_server: False
 - pihole_rev_server_target: 192.168.178.1
 - pihole_rev_server_domain: fritz.box
 - pihole_rev_server_cidr: "192.168.178.0/24"
 - pihole_whitelist_entries: []
 
-Dependencies
-------------
+## Example Playbook
 
-Needs sleif.docker to make sure Docker is configured as needed.
-
-Example Playbook
-----------------
-
-    - hosts: "server"
-      user: root
+```yml
+- hosts: "server"
+  user: root
+  tasks:
+    - name: include_role sleif.pihole_container
+      ansible.builtin.include_role:
+        name: sleif.pihole_container
+        apply:
+          tags: "pihole_container"
       vars:
-        DOCKER_NETWORK_NAME: 'custom_docker_network'
-      roles:
-        - { role: sleif.pihole_docker, tags: "pihole_docker", pihole_external_web_port: '8081:80/tcp' }
+        podman_network_name: "slirp4netns:port_handler=slirp4netns"
+      tags: "pihole_container"
+```
 
-License
--------
+## License
 
 MIT
 
-Author Information
-------------------
+## Author Information
 
 Created in 2021 by Sebastian Berthold

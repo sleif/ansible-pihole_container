@@ -1,15 +1,27 @@
 ---
-container_storage_dir_base: '/srv'
+container_name: pihole
+container_storage_dir_base_local: '/srv'
+pihole_container_published_port_dhcp: '67'
+pihole_container_published_port_dns: '53'
+pihole_container_published_port_http: '80'
+container_published_ports: ["{{
+  pihole_container_published_port_http }}:80", "{{
+  pihole_container_published_port_dns }}:53/tcp", "{{
+  pihole_container_published_port_dns }}:53/udp"]
+
+pihole_container_name: pihole
+pihole_container_hostname: pi.hole
+pihole_dhcp_enabled: false
+podman_network_name: podman
+pihole_container_image: "docker.io/pihole/pihole"
+pihole_container_image_tag: 'latest'
+
 # pihole_external_web_port: '80:80/tcp'
 pihole_password: ""
 pihole_password_encrypted: ""
 
-pihole_rev_server: False
+pihole_rev_server: false
 pihole_rev_server_target: 192.168.178.1
 pihole_rev_server_domain: fritz.box
 pihole_rev_server_cidr: "192.168.178.0/24"
 pihole_whitelist_entries: []
-
-pihole_published_ports:
-  - "53:53/tcp"
-  - "53:53/udp"
