@@ -28,7 +28,7 @@
     regexp: "{{ item.regexp }}"
     line: "{{ item.line }}"
   with_items:
-    - { regexp: '^nameserver 1\.1.1\.1', line: 'nameserver 1.1.1.1' }
+    - {regexp: '^nameserver 1\.1.1\.1', line: 'nameserver 1.1.1.1'}
 
 - name: Include podman_init_vars.yml from sleif.podman
   ansible.builtin.include_tasks: "{{ lookup('first_found', params) }}"
@@ -149,8 +149,8 @@
     regexp: "{{ item.regexp }}"
     line: "{{ item.line }}"
   with_items:
-    # - { regexp: '^WEBPASSWORD.*', line: 'WEBPASSWORD={{ pihole_password_encrypted }}' }
-    - { regexp: '^.*REV_SERVER=', line: 'REV_SERVER={{ pihole_rev_server | lower }}' }
+    # - { regexp: '^WEBPASSWORD.*', line: 'WEBPASSWORD={{ pihole_password_encrypted }}'}
+    - {regexp: '^.*REV_SERVER=', line: 'REV_SERVER={{ pihole_rev_server | lower }}'}
 
 - name: pihole configuration file - cond forward
   become: "{{ podman_rootless | d(true) | bool }}"
@@ -162,9 +162,9 @@
     regexp: "{{ item.regexp }}"
     line: "{{ item.line }}"
   with_items:
-    - { regexp: '^.*REV_SERVER_TARGET=', line: 'REV_SERVER_TARGET={{ pihole_rev_server_target }}' }
-    - { regexp: '^.*REV_SERVER_DOMAIN=', line: 'REV_SERVER_DOMAIN={{ pihole_rev_server_domain }}' }
-    - { regexp: '^.*REV_SERVER_CIDR=', line: 'REV_SERVER_CIDR={{ pihole_rev_server_cidr }}' }
+    - {regexp: '^.*REV_SERVER_TARGET=', line: 'REV_SERVER_TARGET={{ pihole_rev_server_target }}'}
+    - {regexp: '^.*REV_SERVER_DOMAIN=', line: 'REV_SERVER_DOMAIN={{ pihole_rev_server_domain }}'}
+    - {regexp: '^.*REV_SERVER_CIDR=', line: 'REV_SERVER_CIDR={{ pihole_rev_server_cidr }}'}
   when: pihole_rev_server | bool
 
 - name: pihole whitelist file  # noqa: no-handler
@@ -210,4 +210,4 @@
     line: "{{ item.line }}"
     state: absent
   with_items:
-    - { regexp: '^nameserver 1\.1\.1\.1', line: 'nameserver 1.1.1.1' }
+    - {regexp: '^nameserver 1\.1\.1\.1', line: 'nameserver 1.1.1.1'}
