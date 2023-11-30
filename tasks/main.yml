@@ -104,7 +104,7 @@
       - NET_ADMIN
     env:
       ServerIP: "{{ ansible_default_ipv4.address }}"
-      WEBPASSWORD: random
+      WEBPASSWORD: "{{ pihole_password }}"
       PIHOLE_DNS_: "1.1.1.1;1.0.0.1"
       INTERFACE: "{{ 'tap0' if 'slirp4netns' in podman_network_name else 'eth0' }}"
     timezone: "local"
@@ -129,14 +129,14 @@
   when:
     - _container_create_results.changed | bool
 
-- name: pihole | set pihole password  # noqa: no-handler
-  become: "{{ podman_rootless | d(true) | bool }}"
-  become_user: "{{ podman_user if podman_rootless | d(true) | bool else omit }}"
-  containers.podman.podman_container_exec:
-    name: "{{ container_name }}"
-    command: /usr/local/bin/pihole -a -p "{{ pihole_password }}"
-  when:
-    - _container_create_results.changed | bool
+# - name: pihole | set pihole password  # noqa: no-handler
+#   become: "{{ podman_rootless | d(true) | bool }}"
+#   become_user: "{{ podman_user if podman_rootless | d(true) | bool else omit }}"
+#   containers.podman.podman_container_exec:
+#     name: "{{ container_name }}"
+#     command: /usr/local/bin/pihole -a -p "{{ pihole_password }}"
+#   when:
+#     - _container_create_results.changed | bool
 # - name: pihole | set pihole password
 #   ansible.builtin.command: podman exec -ti pihole /usr/local/bin/pihole -a -p "{{ pihole_password }}"
 
