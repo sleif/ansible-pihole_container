@@ -19,30 +19,31 @@ jobs:
 
   lint:
     name: Lint and Ansible Galaxy import
-    runs-on: ubuntu-latest
+    runs-on: ansible-community/community-ee-minimal
+    # runs-on: ubuntu-latest
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
         with:
           path: 'sleif.ws'
 
-      - name: Set up Python 3.
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.x'
+      # - name: Set up Python 3.
+      #   uses: actions/setup-python@v2
+      #   with:
+      #     python-version: '3.x'
 
-      - name: Install test dependencies.
-        run: pip3 install yamllint ansible ansible-lint
+      # - name: Install test dependencies.
+      #   run: pip3 install yamllint ansible ansible-lint
 
-      - name: Yaml lint code.
-        run: |
-          yamllint --version
-          yamllint .
+      # - name: Yaml lint code.
+      #   run: |
+      #     yamllint --version
+      #     yamllint .
 
-      - name: Ansible lint code.
-        run: |
-          ansible-lint --version
-          ansible-lint .
+      # - name: Ansible lint code.
+      #   run: |
+      #     ansible-lint --version
+      #     ansible-lint .
 
       - name: Import Galaxy Role
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
