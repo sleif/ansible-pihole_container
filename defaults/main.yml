@@ -11,6 +11,7 @@ container_published_ports: ["{{
 
 pihole_container_name: pihole
 pihole_container_hostname: pi.hole
+pihole_fqdn: "{{ pihole_container_hostname }}"
 pihole_dhcp_enabled: false
 podman_network_name: podman
 pihole_container_image: "docker.io/pihole/pihole"

@@ -70,6 +70,19 @@
     podman_operation: podman_pod_create
   tags: always
 
+- name: Create Podman secrets
+  become: "{{ podman_rootless | bool }}"
+  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+  containers.podman.podman_secret:
+    state: present
+    name: "{{ item.name }}"
+    data: "{{ item.data }}"
+    skip_existing: true
+  loop:
+    - {name: 'pihole_webpassword', data: '{{ pihole_password }}'}
+  no_log: true
+  tags: podman_secrets
+
 - name: Pull container image {{ pihole_container_image }}
   become: "{{ podman_rootless | bool }}"
   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
@@ -89,6 +102,7 @@
   become_user: "{{ podman_user if podman_rootless | d(true) | bool else omit }}"
   containers.podman.podman_container:
     name: "{{ container_name }}"
+    # hostname: "pihole2"
     hostname: "{{ pihole_container_hostname }}"
     image: "{{ pihole_container_image }}:{{ pihole_container_image_tag }}"
     state: created
@@ -102,10 +116,15 @@
       - "{{ _dnsmasq_etc_dir }}/:/etc/dnsmasq.d/:Z"
     capabilities:
       - NET_ADMIN
+    secrets:
+      - pihole_webpassword
     env:
+      # https://github.com/pi-hole/docker-pi-hole#environment-variables
       ServerIP: "{{ ansible_default_ipv4.address }}"
-      WEBPASSWORD: "{{ pihole_password }}"
+      WEBPASSWORD_FILE: "/run/secrets/pihole_webpassword"
       PIHOLE_DNS_: "1.1.1.1;1.0.0.1"
+      CORS_HOSTS: "{{ pihole_fqdn }}"
+      VIRTUAL_HOST: "{{ pihole_fqdn }}"
       INTERFACE: "{{ 'tap0' if 'slirp4netns' in podman_network_name else 'eth0' }}"
     timezone: "local"
   register: _container_create_results
