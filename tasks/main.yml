@@ -60,6 +60,15 @@
     - "{{ _dnsmasq_etc_dir }}"
   ignore_errors: true
 
+- name: provide DNS overrides  # noqa: ignore-errors
+  become: "{{ podman_rootless | bool }}"
+  become_method: containers.podman.podman_unshare
+  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+  ansible.builtin.copy:
+    dest: "{{ _dnsmasq_etc_dir }}/99-self-managed.conf"
+    content: "{{ pihole_dnsmasq_custom_config }}"
+    mode: '0644'
+
 - name: Include role sleif.podman podman_operation podman_pod_create - creates a  pod if necessary
   ansible.builtin.include_role:
     name: sleif.podman
