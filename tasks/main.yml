@@ -22,13 +22,13 @@
   when:
     - ansible_facts['services']['systemd-resolved.service'] is defined
 
-- name: enable fallback nameserver in resolv.conf
-  ansible.builtin.lineinfile:
-    path: /etc/resolv.conf
-    regexp: "{{ item.regexp }}"
-    line: "{{ item.line }}"
-  with_items:
-    - {regexp: '^nameserver 1\.1.1\.1', line: 'nameserver 1.1.1.1'}
+# - name: enable fallback nameserver in resolv.conf
+#   ansible.builtin.lineinfile:
+#     path: /etc/resolv.conf
+#     regexp: "{{ item.regexp }}"
+#     line: "{{ item.line }}"
+#   with_items:
+#     - {regexp: '^nameserver 1\.1.1\.1', line: 'nameserver 1.1.1.1'}
 
 - name: Include podman_init_vars.yml from sleif.podman
   ansible.builtin.include_tasks: "{{ lookup('first_found', params) }}"
@@ -41,6 +41,12 @@
   ansible.builtin.file:
     dest: "{{ _container_storage_dir_base_local }}/pihole/pihole/local.list"
     state: absent
+
+- name: add DHCP port to published ports
+  ansible.builtin.set_fact:
+    container_published_ports: "{{ container_published_ports + [pihole_container_published_port_dhcp ~ ':67/udp'] }} "
+  when:
+    - pihole_dhcp_enabled | bool
 
 - name: Set additional facts
   ansible.builtin.set_fact:
@@ -69,93 +75,50 @@
     content: "{{ pihole_dnsmasq_custom_config }}"
     mode: '0644'
 
-- name: Include role sleif.podman podman_operation podman_pod_create - creates a  pod if necessary
+- name: include_role sleif.podman podman_operation podman_create_container for pihole
   ansible.builtin.include_role:
     name: sleif.podman
     apply:
       tags:
-        - podman_pod_create
+        - podman_container_create
   vars:
-    podman_operation: podman_pod_create
-  tags: always
-
-- name: Create Podman secrets
-  become: "{{ podman_rootless | bool }}"
-  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
-  containers.podman.podman_secret:
-    state: present
-    name: "{{ item.name }}"
-    data: "{{ item.data }}"
-    skip_existing: true
-  loop:
-    - {name: 'pihole_webpassword', data: '{{ pihole_password }}'}
-  no_log: true
-  tags: podman_secrets
-
-- name: Pull container image {{ pihole_container_image }}
-  become: "{{ podman_rootless | bool }}"
-  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
-  containers.podman.podman_image:
-    name: "{{ pihole_container_image }}"
-    tag: "{{ pihole_container_image_tag }}"
-    # force: true
-
-- name: add DHCP port to published ports
-  ansible.builtin.set_fact:
-    container_published_ports: "{{ container_published_ports + [pihole_container_published_port_dhcp ~ ':67/udp'] }} "
-  when:
-    - pihole_dhcp_enabled | bool
-
-- name: Create pihole container
-  become: "{{ podman_rootless | d(true) | bool }}"
-  become_user: "{{ podman_user if podman_rootless | d(true) | bool else omit }}"
-  containers.podman.podman_container:
-    name: "{{ container_name }}"
-    # hostname: "pihole2"
-    hostname: "{{ pihole_container_hostname }}"
-    image: "{{ pihole_container_image }}:{{ pihole_container_image_tag }}"
-    state: created
-    pod: "{{ pod_name | default(omit) }}"
-    restart_policy: always
-    recreate: "{{ podman_container_recreate | d(false) }}"
-    network: "{{ podman_network_name if pod_name | d('') is falsy else [] }}"
-    publish: "{{ container_published_ports | default([]) }}"
-    volumes:
-      - "{{ _pihole_etc_dir }}/:/etc/pihole/:Z"
-      - "{{ _dnsmasq_etc_dir }}/:/etc/dnsmasq.d/:Z"
-    capabilities:
-      - NET_ADMIN
-    secrets:
-      - pihole_webpassword
-    env:
-      # https://github.com/pi-hole/docker-pi-hole#environment-variables
-      ServerIP: "{{ ansible_default_ipv4.address }}"
-      WEBPASSWORD_FILE: "/run/secrets/pihole_webpassword"
-      PIHOLE_DNS_: "1.1.1.1;1.0.0.1"
-      CORS_HOSTS: "{{ pihole_fqdn }}"
-      VIRTUAL_HOST: "{{ pihole_fqdn }}"
-      INTERFACE: "{{ 'tap0' if 'slirp4netns' in podman_network_name else 'eth0' }}"
-    timezone: "local"
-  register: _container_create_results
-
-# - debug: var=_container_create_results
-
-- name: Include role sleif.podman podman_operation podman_generate_systemd
-  ansible.builtin.include_role:
-    name: sleif.podman
-    apply:
-      tags:
-        - podman_generate_systemd
-  vars:
-    podman_operation: podman_generate_systemd
-    target: "{{ pod_name if pod_name | d('') is truthy else container_name }}"
-  tags: always
+    # podman_rootless: true
+    # podman_network_name: "{{ podman_networks.podman_network_rootless.podman_network_name if podman_rootless | bool else
+    #   podman_networks.podman_network_root.podman_network_name }}"
+    podman_operation: podman_container_create
+    container_name: '{{ pihole_container_name }}'
+    target: "{{ pod_name if pod_name | d('') is truthy else pihole_container_name }}"
+    _container:
+      name: '{{ container_name }}'
+      image:
+        name: "{{ pihole_container_image }}"
+        tag: "{{ pihole_container_image_tag }}"
+      network: "slirp4netns:port_handler=slirp4netns"
+      publish: '{{ container_published_ports | default([]) }}'
+      volumes:
+        - {'host': '{{ _pihole_etc_dir }}', 'target': '/etc/pihole/:Z', 'mode': '0775'}
+        - {'host': '{{ _dnsmasq_etc_dir }}', 'target': '/etc/dnsmasq.d/:Z', 'mode': '0775'}
+      capabilities:
+        - NET_ADMIN
+      secrets:
+        - {name: 'pihole_webpassword', data: '{{ pihole_password }}'}
+      env:
+        # https://github.com/pi-hole/docker-pi-hole#environment-variables
+        ServerIP: "{{ ansible_default_ipv4.address }}"
+        WEBPASSWORD_FILE: "/run/secrets/pihole_webpassword"
+        PIHOLE_DNS_: "1.1.1.1;1.0.0.1"
+        CORS_HOSTS: "{{ pihole_fqdn }}"
+        VIRTUAL_HOST: "{{ pihole_fqdn }}"
+        INTERFACE: "{{ 'tap0' if 'slirp4netns' in podman_network_name else 'eth0' }}"
+        TZ: "Europe/Berlin"
+      timezone: "Europe/Berlin"
+  tags: podman_container_create
 
 - name: waiting for pihole startup (40 sec)  # noqa: no-handler
   ansible.builtin.wait_for:
     timeout: 40
   when:
-    - _container_create_results.changed | bool
+    - _podman_container_create_changed | bool
 
 # - name: pihole | set pihole password  # noqa: no-handler
 #   become: "{{ podman_rootless | d(true) | bool }}"
@@ -231,11 +194,11 @@
   when:
     - pihole_container_published_port_dhcp != "67"
 
-- name: disable fallback nameserver in resolv.conf
-  ansible.builtin.lineinfile:
-    path: /etc/resolv.conf
-    regexp: "{{ item.regexp }}"
-    line: "{{ item.line }}"
-    state: absent
-  with_items:
-    - {regexp: '^nameserver 1\.1\.1\.1', line: 'nameserver 1.1.1.1'}
+# - name: disable fallback nameserver in resolv.conf
+#   ansible.builtin.lineinfile:
+#     path: /etc/resolv.conf
+#     regexp: "{{ item.regexp }}"
+#     line: "{{ item.line }}"
+#     state: absent
+#   with_items:
+#     - {regexp: '^nameserver 1\.1\.1\.1', line: 'nameserver 1.1.1.1'}
