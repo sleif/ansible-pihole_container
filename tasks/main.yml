@@ -118,7 +118,7 @@
   ansible.builtin.wait_for:
     timeout: 40
   when:
-    - _podman_container_create_changed | bool
+    - _container_create_changed | bool
 
 # - name: pihole | set pihole password  # noqa: no-handler
 #   become: "{{ podman_rootless | d(true) | bool }}"
